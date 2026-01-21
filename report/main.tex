@@ -1,0 +1,111 @@
+\documentclass[
+	a4paper, % Paper size, use either a4paper or letterpaper
+	10pt, % Default font size, can also use 11pt or 12pt, although this is not recommended
+	unnumberedsections, % Comment to enable section numbering
+	twoside, % Two side traditional mode where headers and footers change between odd and even pages, comment this option to make them fixed
+]{LTJournalArticle}
+
+\usepackage{lettrine}
+
+\addbibresource{references.bib} % BibLaTeX bibliography file
+
+\runninghead{Retina Vessels Segmentation} % A shortened article title to appear in the running head, leave this command empty for no running head
+
+\footertext{} % Text to appear in the footer, leave this command empty for no footer text
+
+\setcounter{page}{1} % The page number of the first page, set this to a higher number if the article is to be part of an issue or larger work
+
+%----------------------------------------------------------------------------------------
+%	TITLE SECTION
+%----------------------------------------------------------------------------------------
+
+\title{Retina Vessels Segmentation} % Article title, use manual lines breaks (\\) to beautify the layout
+
+% Authors are listed in a comma-separated list with superscript numbers indicating affiliations
+% \thanks{} is used for any text that should be placed in a footnote on the first page, such as the corresponding author's email, journal acceptance dates, a copyright/license notice, keywords, etc
+\author{%
+	Christian Faccio\textsuperscript{1} \thanks{\href{mailto:christianfaccio@outlook.it}{christianfaccio@outlook.it}}
+}
+
+% Affiliations are output in the \date{} command
+\date{\footnotesize\textsuperscript{\textbf{1}}University of Alicante}
+
+% Full-width abstract
+\renewcommand{\maketitlehookd}{%
+	\begin{abstract}
+		\noindent Automatic detection and segmentation of retinal blood vessels is a crucial task in medical image analysis, as it aids in the diagnosis and monitoring of various ocular and systemic diseases. In this work, I implemented two ways to segment retinal vessels from fundus images: the first method uses the Retinex algorithm to enhance the vessels, while the second a series of morphological operations. The two methods perform similarly, even if not optimally. Further improvements could be achieved by incorporating deep learning techniques or more advanced image processing algorithms.
+	\end{abstract}
+}
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+\maketitle % Output the title section
+
+%----------------------------------------------------------------------------------------
+%	ARTICLE CONTENTS
+%----------------------------------------------------------------------------------------
+
+\section{Introduction}
+
+\lettrine[findent=2pt]{\textbf{D}}{}etecting and segmenting retinal blood vessels from fundus images is extremely helpful in medicine, as it helps detecting possible abnormalities or signs of diseases. 
+More specifically, the diameter of vessels is very important, even if I don't treat that problem here. My goal is just to detect and segment the vessels with the highest possible accuracy, which is computed with the Intersection over Union (IoU) metric. 
+Generally speaking, there are many ways to approach this problem, either with supervised or unsupervised algorithms. The first category requires hand-labeled ground truth images for training, where each pixel is represented by a feature vector which is obtained from local or global information of the image. The second approach, instead, does not require training data but uses techniques like morphological filters (kernels) or tracking-based methods. 
+Nowadays, methods which include Deep Learning algorithms are most used and achieve higher performance with respect to the methods here treated. 
+The main problems that are encountered in this task include first of all the image quality, since images with to poor contrast, inhomogeneous background or presence of noise reduce the capability of these techniques of accurately segment the vessels. Second, the complexity of the vasculature reduces the performance on those images, leading either to the necessity of more complex models or poorer results overall.
+The methods used here are all unsupervised, and the dataset is divided in two: the \textit{ground-truth images}, which are already segmented by specialists, and the \textit{input images}, which are the raw images. The dataset is taken from the DRIVE dataset and contains 20 images for each category. 
+
+\section{Methods}
+
+The process of detecting and segmenting the vessels is divided in two main phases: \textbf{vessels' enhancement} and \textbf{segmentation}. The former is what divides the methods later presented, while the last remains the same. 
+Moreover, the starting point is the green channel of the raw images, for every method, since it is the channel that best highlights the contrast between vessels and background. 
+Finally, the segmentation operation has been done just by setting a threshold (25\% and 20\% respectively) and assigning 1 to all the pixel intensities below that threshold and 0 to all pixel intensities above it. A function that removes small objects was applied after it to enhance the images, with a minimum pixel size of 100.
+
+\subsection{Retinex}
+This method uses the Retinex-based Inhomogeneity Correction algorithm well explained in \cite{zhao2015retinal}. Essentially, in the Retinex theory a given image can be modeled as a component-wise multiplication of two components, the reflectance and the illumination. Typically, the reflectance image reveals the object of interest more objectively and so it can be considered the enhanced version of the image. This method is here implemented using a bilateral filter for inhomogeneity correction, which can maintain the edge information essential for accurate vessel detection. 
+The reflectance image $R(x)$ can be obtained this way:
+\[
+R(x) = \log(I(x) + 1) - \log(L(x) + 1)
+\]
+where $I(x)$ is the pixel intensity and $L(x)$ is the results of the application of the bilateral filter. The filter has been applied using the OpenCV implementation, with the diameter of each pixel neighborhood set to 15 and the two sigma parameters set to 75. 
+In essense, this filtering replaces the intensity value at $x$ with an average of similar nearby intensity values, averaging away small, weakly correlated differences of intensity.
+
+\subsection{Morph}
+
+This method, well explained in \cite{hassan2015retinal}, uses morphological operations concatenated with a gaussian kernel for smoothing and removing any noise. The selected structuring element is linear, as is perfect for the vessels' structure. 
+The first step is then an opening operation on 12 directions, the maximum response is taken and a reconstruction operation is applied. The second step is the application of a Top-Hat transform to the result of the previous step, always at 12 directions, and then the sum of the 12 results. This way the gray difference between the vessels and the background is increased. The final step, as already mentioned, is the application of a Gaussian kernel with 3 pixels in width and a standard deviation of $0.7$.  
+
+\section{Results}
+
+I have applied the two methods to the 20 raw images of the DRIVE dataset and compared the obtained segmentation with the actual ground truth. A sample of the whole procedure is shown in Fig.~\ref{fig:retinex} and Fig.~\ref{fig:morph}. The metric used for comparison is the Intersection over Union (IoU), which essentially computes the fraction of the white pixels present in both images (logic \textit{and}) and the white pixels present either in one or the other (logic \textit{or}). The results are 54.27\% for the first method and 58.6\% for the second one. 
+\begin{figure}
+	\centering 
+	\includegraphics[width=\linewidth]{assets/retinex.png}
+	\caption{Sample result using Retinex-based method.}
+	\label{fig:retinex}
+\end{figure} 
+\begin{figure}
+	\centering 
+	\includegraphics[width=\linewidth]{assets/morph.png}
+	\caption{Sample result using Morph-based method.}
+	\label{fig:morph}
+\end{figure} 
+This results are not the best one can obtain, as it is possible to note that the vessels with highest diameter are not segmented well and this reduces the overall results. Moreover, the vessels with lowest diameter are not even recognized, but this is a common problem in literature using this kind of methods and can be solved using more advanced techniques like neural networks. 
+The methods perform two different enhancement techniques, but they achieve almost the same results. Once the vessels are enhanced, a simple segmentation is performed, followed by a small object removal function. Some vessels' width is lost during this phase, which is probably the worst drawback.
+
+\section{Conclusions}
+
+Retinal vessels segmentation is a difficult problem, where many factors play important roles and are not always solvable. However, these two approaches that I have implemented are based on methods seen in literature and the results are overall good indeed, even if not perfect. 
+Taking inspiration from the methods presented in \cite{zhao2015retinal}, I also tried to implement the local-based vessel enhancement algorithm, but given its complexity and the small upgrade in performance relative to the others presented here, I decided to not include it in this report. These methods are simple and fast to execute, which makes them perfect for an initial segmentation of the vessels.
+More advancements can be made, using more advanced algorithms or slightly changing the hyperparameters of the algorithms. The main problem faced is the dimension of the vessels, since the smallest ones are not even detected and the biggest ones are not segmented correctly, but these methods have proven to be quite good for the relatively simple task of just segment the retina vessels. Since the method using morphological operations performed slightly better, I would suggest to use it as a starting point for future improvements.
+
+%----------------------------------------------------------------------------------------
+%	 REFERENCES
+%----------------------------------------------------------------------------------------
+
+\printbibliography % Output the bibliography
+
+%----------------------------------------------------------------------------------------
+
+\end{document}
