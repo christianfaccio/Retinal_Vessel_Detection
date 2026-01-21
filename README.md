@@ -9,5 +9,5 @@
 ---
 
 <div align="center">
-   <img src="output/detected_vessels.png" alt="detected vessels">
+   <img src="report/assets/morph.png" alt="detected vessels">
 </div>
